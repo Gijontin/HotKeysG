@@ -4,6 +4,8 @@ using System.Windows.Forms;
 using System.Diagnostics;
 using System.Diagnostics.CodeAnalysis;
 using System.Configuration;
+using System.Text.Json;
+using System.ComponentModel.Design;
 
 namespace HotkeysG {
     /*
@@ -31,41 +33,28 @@ namespace HotkeysG {
         );
         //call ex: UnregisterHotKey(this.Handle, 1);
 
+        public void RegKeybinds() {
+            //foreach (KeyBindings bind in SettingsManager.loadedKB) {
+            foreach (KeyBindings bind in settings.loadedKB) {
+                RegisterHotKey(this.Handle, bind.ID, bind.winSignal1 | bind.winSignal2, bind.triggerKey);
+            }
+        }
+        public void UnregKeybinds() {
+            foreach (KeyBindings bind in settings.loadedKB) {
+                UnregisterHotKey(this.Handle, bind.ID);
+            }
+        }
         //hexadecimalkoderna för modifier-flags i Windows för respektive keyboard knapp, de är mer windows-specifika kodade signaler från knapparna och inte registrering av knapptrycken...
         //har med hur windows läser bits istället för uint fsModifiers parametern i RegisterHotKey
         private const uint MOD_ALT = 0x0001; // NOT == Keys.Alt
         private const uint MOD_SHIFT = 0x0004; //NOT == Keys.Shift
         private const uint WM_HOTKEY = 0x0312; //typ signalen ditt program/fönster får när en valid key-kombo har tryckts (WndProc som fångar upp den)
         private NotifyIcon trayIcon;
-
-        /*
-        Använder KeyBindings som en blueprint strukt just nu istället för en riktig data bas som user kan customize:a i
-        Egentligen ska en funktion i KeyBindings eller detta objektet skapa egna ProcessStartInfo class som sedan matas in i
-        LaunchProgram baserat på keybinds
-        */
-        private KeyBindings gitBash;
-        private KeyBindings edge;
-
+        private SettingsManager settings;
         public Form1(){ //constructor (gör en osynlig winform app för att lätt komma åt hotkey funktionalitet i windows)
         //start form(app)
             InitializeComponent();
-
-            gitBash = new KeyBindings {
-                ID = 1,
-                filePath = @"C:\Program Files\Git\git-bash.exe",
-                filMapp = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile),
-                winSignal1 = MOD_ALT,
-                winSignal2 = MOD_SHIFT,
-                triggerKey = Keys.T,
-            };
-            edge = new KeyBindings {
-                ID = 2,
-                filePath = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe",
-                filMapp = "",
-                winSignal1 = MOD_ALT,
-                winSignal2 = MOD_SHIFT,
-                triggerKey = Keys.E,
-            };
+            settings = new SettingsManager();
 
         //Add as TrayIcon
             trayIcon = new NotifyIcon();
@@ -85,14 +74,13 @@ namespace HotkeysG {
             this.WindowState = FormWindowState.Minimized;
             this.Visible = false;
 
-        //listen for hotkeys and execute
-            //denna kompilerar för att man hämtat funktionen från user32.dll via [DllImport("<filnamn>)]...
-            //TLDR; denna key kombon gör om signalen av alla tre till int id = 1, senare i WndProc moddar vi den till att bara koll efter id == 1
-            RegisterHotKey(this.Handle, 1, gitBash.winSignal1 | gitBash.winSignal2, gitBash.triggerKey); // | fungerar som && i windows syntax, eller nått...
-            RegisterHotKey(this.Handle, 2, MOD_ALT | MOD_SHIFT, Keys.E);
+        //Import keybind settings
+            //SettingsManager
+            //parse out the settings ID for the app(Windows) to know how many and which int ID's to listen to    
+            RegKeybinds();
 
         }
-    //WindowProcedure funktionen som lyssnar efter WM_HOTKEY som då är en return som bekräftar id't på någon av de registrerade RegisterHotKey() Keybindingsen
+    //WindowProcedure funktionen som lyssnar efter WM_HOTKEY som då är en return som signalerar att wParam har skickats ut, dvs en bekräftelse på att ett ID från RegisterHotKeys har tryckts ned och vilken
         protected override void WndProc(ref Message m) {
             /*
             det här är winform feature som då lyssnar på vad som händer, mus-movement, keybord tryck, window refresh etc
@@ -104,8 +92,11 @@ namespace HotkeysG {
             */
             if (m.Msg == WM_HOTKEY){
                 int id = m.WParam.ToInt32();
-                if (id == 1){
-                    LaunchProgram();
+                foreach (KeyBindings bind in settings.loadedKB){
+                    if (bind.ID == id){
+                        LaunchProgram(id);
+                        break;
+                    }
                 }
             }
 
@@ -113,27 +104,23 @@ namespace HotkeysG {
             base.WndProc(ref m);
         }
 
-        private void LaunchProgram(){ //eget skit i C# 
-        
-            //Process.Start(@"C:\Program Files\Git\git-bash.exe"); //opens the process based on the .exe location
-
-            //edge
-            ProcessStartInfo edge = new ProcessStartInfo();
-            edge.FileName = @"C:\Program Files (x86)\Microsoft\Edge\Application\msedge.exe";
-            Process.Start(edge);
-
-            //bash
-            ProcessStartInfo bash = new ProcessStartInfo();
-            bash.FileName = @"C:\Program Files\Git\git-bash.exe";
-            bash.WorkingDirectory = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-            Process.Start(bash);
-        }
-        private void LaunchProgram(KeyBindings key) {
+        private void LaunchProgram(int id) {
+            try {
+                ProcessStartInfo program = new ProcessStartInfo();
+                program.FileName = settings.loadedKB[id].filePath;
+                if (!string.IsNullOrEmpty(settings.loadedKB[id].filMapp)) {
+                    program.WorkingDirectory = settings.loadedKB[id].filMapp;
+                }
+                Process.Start(program);
+            } 
+            catch {
                 
             }
+
+        }
         protected override void OnFormClosing(FormClosingEventArgs e){
             //moddar denna biten så att Windows inte tror att programmet fortfarande "äger" keybind:en efter programmet stängs ned
-            UnregisterHotKey(this.Handle, 1);
+            UnregKeybinds();
 
             //removes potential "ghost icon" remaining after closing software
             trayIcon.Visible = false;
