@@ -39,9 +39,10 @@ namespace HotkeysG {
             jsonlist.Add(edge);
 
             string json = JsonSerializer.Serialize(
-                jsonlist,
-                new JsonSerializerOptions {WriteIndented = true}
+                jsonlist,                                           //List<type>
+                new JsonSerializerOptions {WriteIndented = true}    //skumt json-feature skit
             );
+            
             File.WriteAllText("settings.json", json);
         //END .JSON
 */

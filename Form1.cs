@@ -6,6 +6,7 @@ using System.Diagnostics.CodeAnalysis;
 using System.Configuration;
 using System.Text.Json;
 using System.ComponentModel.Design;
+using System.CodeDom;
 
 namespace HotkeysG {
     /*
@@ -49,6 +50,7 @@ namespace HotkeysG {
         private const uint MOD_ALT = 0x0001; // NOT == Keys.Alt
         private const uint MOD_SHIFT = 0x0004; //NOT == Keys.Shift
         private const uint WM_HOTKEY = 0x0312; //typ signalen ditt program/fönster får när en valid key-kombo har tryckts (WndProc som fångar upp den)
+        
         private NotifyIcon trayIcon;
         private SettingsManager settings;
         public Form1(){ //constructor (gör en osynlig winform app för att lätt komma åt hotkey funktionalitet i windows)

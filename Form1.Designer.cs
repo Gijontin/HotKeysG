@@ -29,9 +29,11 @@ partial class Form1
     private void InitializeComponent()
     {
         components = new System.ComponentModel.Container();
+        FormBorderStyle = FormBorderStyle.FixedToolWindow;
         AutoScaleMode = AutoScaleMode.Font;
         ClientSize = new Size(800, 450);
-        Text = "Form1";
+        Opacity = 0;
+        Text = "HotkeysG";
     }
 
     #endregion
