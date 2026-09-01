@@ -66,6 +66,10 @@ namespace HotkeysG {
             
             //TrayIcon menu (right click and get a "Close" option)
                 ContextMenuStrip menu = new ContextMenuStrip();
+
+            //REPLACE THE LAMBDA CALL FOR this.Close() WITH KEYBIND CONFIGURATION WINDOW
+                menu.Items.Add("Configure Settings", null, (se, e) => this.Close()); //REPLACE THE LAMBDA CALL FOR this.Close() WITH KEYBIND CONFIGURATION WINDOW
+
                 menu.Items.Add("Close", null, (se, e) => this.Close());
                 trayIcon.ContextMenuStrip = menu;
 
