@@ -1,54 +1,10 @@
-using System;
-using System.Runtime.InteropServices; //ansvarar för att DllImport funkar
-using System.Windows.Forms;
-using System.Diagnostics;
-using System.Diagnostics.CodeAnalysis;
-using System.Configuration;
-using System.Text.Json;
-using System.ComponentModel.Design;
-using System.CodeDom;
-
 namespace HotkeysG {
-    /*
-
-    MED DLL OCH OVERRIDE WINDOWS SAKERNA SÅ ÄR DET NÅGOT I VS CODE SOM GÖR ATT BRACKET FORMATET FUCKAS, KANSKE
-
-    HAR JAG TUR ÄR LÖSNINGEN ATT SEPARERA DLLIMPORT OCH OVERRIDE FUNKTIONERNA TILL EN ANNA .cs FIL...
-
-    */
     public partial class Form1 : Form {
-    //square brackets i C# betyder att det är en "attribute", typ metadata som ändrar hur saken under ska bete sig (tex att det är C/C++ kodad metod från en dll fil utanför C#)
-        [DllImport("user32.dll")] //säger åt .net att importera C/C++ kod ifrån denna inbyggda DLL filen och metoden under refererar dll skiten
-        private static extern bool RegisterHotKey(
-            IntPtr hWnd, //är vilket program som ska läsa av det, i mitt fall är det alltid HotKeysG fönster (Form1) som ska göra det AKA "this.Handle"
-            int id, //id är till för varje unik keybind, dvs edge och git-bash kan inte dela id-värde (och inget annat program iheller för den delen)
-            uint fsModifiers, //modifiers är bara alt/ctrl/shift/win(super) och de skickar bara signal att de är nedtryckta "Keys" agerar som en "tru trigger" och är tänkt att aldrig vara någon av modifier-knapparna
-            Keys vk
-        );
-        //call ex: RegisterHotKey(this.Handle, 2, MOD_ALT | MOD_SHIFT, Keys.E);
 
-        [DllImport("user32.dll")]
-        private static extern bool UnregisterHotKey(
-            IntPtr hWnd,
-            int id
-        );
-        //call ex: UnregisterHotKey(this.Handle, 1);
-
-        public void RegKeybinds() {
-            //foreach (KeyBindings bind in SettingsManager.loadedKB) {
-            foreach (KeyBindings bind in settings.loadedKB) {
-                RegisterHotKey(this.Handle, bind.ID, bind.winSignal1 | bind.winSignal2, bind.triggerKey);
-            }
-        }
-        public void UnregKeybinds() {
-            foreach (KeyBindings bind in settings.loadedKB) {
-                UnregisterHotKey(this.Handle, bind.ID);
-            }
-        }
         //hexadecimalkoderna för modifier-flags i Windows för respektive keyboard knapp, de är mer windows-specifika kodade signaler från knapparna och inte registrering av knapptrycken...
         //har med hur windows läser bits istället för uint fsModifiers parametern i RegisterHotKey
-        private const uint MOD_ALT = 0x0001; // NOT == Keys.Alt
-        private const uint MOD_SHIFT = 0x0004; //NOT == Keys.Shift
+        private const uint MOD_ALT = 0x0001; //NOT the same as: Keys.Alt
+        private const uint MOD_SHIFT = 0x0004; //NOT the same as: Keys.Shift
         private const uint WM_HOTKEY = 0x0312; //typ signalen ditt program/fönster får när en valid key-kombo har tryckts (WndProc som fångar upp den)
         
         private NotifyIcon trayIcon;
@@ -58,7 +14,11 @@ namespace HotkeysG {
             InitializeComponent();
             settings = new SettingsManager();
 
-        //Add as TrayIcon
+            //Import the ID for configured hotkeys så att man kan skriva en kod som fattar upp ID:na i WndProc
+            //HandleCreated blir som en aktiv lyssnare efter ändringar och uppdaterar då "spontant" Form1 med RegKeybinds
+            this.HandleCreated += (s, e) => HotKeyManager.ReloadRegKeybinds(this, settings.loadedKB); //bara WinForm32 quirk som kräver denna reloadgrejen här...
+
+        //TrayIcon
             trayIcon = new NotifyIcon();
             trayIcon.Icon = SystemIcons.Application;
             trayIcon.Visible = true;
@@ -67,24 +27,17 @@ namespace HotkeysG {
             //TrayIcon menu (right click and get a "Close" option)
                 ContextMenuStrip menu = new ContextMenuStrip();
 
-            //REPLACE THE LAMBDA CALL FOR this.Close() WITH KEYBIND CONFIGURATION WINDOW
-                menu.Items.Add("Configure Settings", null, (se, e) => this.Close()); //REPLACE THE LAMBDA CALL FOR this.Close() WITH KEYBIND CONFIGURATION WINDOW
+            //"Knapp"-funktioner
+                menu.Items.Add("Configure Settings", null, (se, e) => new Form2(this ,settings).Show());
 
                 menu.Items.Add("Close", null, (se, e) => this.Close());
                 trayIcon.ContextMenuStrip = menu;
 
         //Disable GUI 
-            // (avnänd inte .Hide(), den stänger av efter en ruta poppar upp, ser fult och malware-igt ut)
-            //this.Hide();
+            //this.Hide(); // (avnänd inte .Hide(), den stänger av efter en ruta poppar upp, ser fult och malware-igt ut)
             this.ShowInTaskbar = false;
             this.WindowState = FormWindowState.Minimized;
             this.Visible = false;
-
-        //Import keybind settings
-            //SettingsManager
-            //parse out the settings ID for the app(Windows) to know how many and which int ID's to listen to    
-            RegKeybinds();
-
         }
     //WindowProcedure funktionen som lyssnar efter WM_HOTKEY som då är en return som signalerar att wParam har skickats ut, dvs en bekräftelse på att ett ID från RegisterHotKeys har tryckts ned och vilken
         protected override void WndProc(ref Message m) {
@@ -100,7 +53,8 @@ namespace HotkeysG {
                 int id = m.WParam.ToInt32();
                 foreach (KeyBindings bind in settings.loadedKB){
                     if (bind.ID == id){
-                        LaunchProgram(id);
+                        HotKeyManager.LaunchProgram(id, settings.loadedKB);
+                        //LaunchProgram(id);
                         break;
                     }
                 }
@@ -110,23 +64,9 @@ namespace HotkeysG {
             base.WndProc(ref m);
         }
 
-        private void LaunchProgram(int id) {
-            try {
-                ProcessStartInfo program = new ProcessStartInfo();
-                program.FileName = settings.loadedKB[id].filePath;
-                if (!string.IsNullOrEmpty(settings.loadedKB[id].filMapp)) {
-                    program.WorkingDirectory = settings.loadedKB[id].filMapp;
-                }
-                Process.Start(program);
-            } 
-            catch {
-                
-            }
-
-        }
         protected override void OnFormClosing(FormClosingEventArgs e){
             //moddar denna biten så att Windows inte tror att programmet fortfarande "äger" keybind:en efter programmet stängs ned
-            UnregKeybinds();
+            HotKeyManager.UnregKeybinds(this, settings.loadedKB);
 
             //removes potential "ghost icon" remaining after closing software
             trayIcon.Visible = false;
