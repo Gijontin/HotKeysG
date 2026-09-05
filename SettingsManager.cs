@@ -5,6 +5,43 @@ namespace HotkeysG {
 
         public List<KeyBindings>? loadedKB;
         
+        //global funktion för att väldigt snabbt, hacky och lätt fånga knapptryck från keyboard:et
+        public static Keys CaptureKey() {
+            Keys key = Keys.None;
+
+        //skapa en snabb, ful, temporär prompt-ruta
+            using (var f = new Form()) {
+                f.KeyPreview = true; //prio lyssning på input över annat skit
+                f.StartPosition = FormStartPosition.CenterScreen;
+                
+                f.FormBorderStyle = FormBorderStyle.FixedDialog;
+                f.MinimizeBox = false;
+                f.MaximizeBox = false;
+                f.TopMost = true; //typ "override" att den är främst av alla program på skärmen...
+
+                f.Width = 300;
+                f.Height = 120;
+
+                var label = new Label() {
+                    Text = "Press a key to set your hotkey...\nOR press 'Esc' to cancel...",
+                    AutoSize = false,
+                    TextAlign =  ContentAlignment.MiddleCenter,
+                    Dock = DockStyle.Fill,
+                    Font = new Font("Segoe UI", 12, FontStyle.Regular),
+                };
+                
+                f.Controls.Add(label);
+
+            //funktion som faktiskt läser av keypress
+                f.KeyDown += (s, e) => {
+                    key = e.KeyCode;
+                    f.Close();
+                };
+                f.ShowDialog();
+            }
+            //let the logic of pressing Escape key to cancel the saving be handled in the function där jag kallar denna funktionen...
+            return key;
+        }
         //läsa settings.json och importera till en List<KeyBinding> 
         public void laddaSettings() { //ladda = deserialisera
             //spara hela filen som en string-text
@@ -16,28 +53,24 @@ namespace HotkeysG {
         
         //skriva settings.json och importera till en List<KeyBinding> 
         public void sparaSettings() {
-            /*
-            Det meckiga här bli att koda WinForms till att öppna filsökvägen och sedan genom att välja en fil kopiera över dennes information
-            till min KeyBindings class(struct, really) samt ange hotkey:sen man vill använda som också ska över till den struct:en
-            ...för att sedan slutligen läggas till i loadedKB listan med .Add featuren
 
-            EFTER DEN PROCESSEN LÄR MAN FAKTISKT KALLA "sparaSetting()" för att göra nedanstående process...
+            //fixa till int ID variablerna i kronologiskt följd igen innan listan sparas
+                //ingen loop lär hända om listan är 0 så behöver inte skriva en skip-if check
+            for (int i = 0; i < loadedKB.Count; i++) {
+                loadedKB[i].ID = i;
+            }
 
-            .json kan visst bara skriva om hela filer, det är allt eller inget, intre ändra något i mitten eller lägga till något i slutet etc...
+            string json = JsonSerializer.Serialize(
+                loadedKB,                                           //List<type>
+                new JsonSerializerOptions {WriteIndented = true}    //skumt json-feature skit
+            );
 
-            Så, stegen för när något nytt ska sparas
-            1. Spara ett nytt objekt i loadedKB
-                loadedKB.Add(<ny KeyBindings>)
-
-            2. Formattera om hela loadedKB listan via någon serialize json feature eller något
-                string tempStr = JsonSerializer.Serialize( .. );
-
-            3. Overwrite:a settings.json med den nya stringen som innehåller det uppdaterade objeketet i Listan
-                File.WriteAllText("settings.json", tempStr);
-
-            */
+            File.WriteAllText("settings.json", json);
         }
-
+        public void reloadSetting() {
+            sparaSettings();
+            laddaSettings();
+        }
         public SettingsManager() {
             laddaSettings();
         }
