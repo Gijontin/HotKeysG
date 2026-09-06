@@ -10,6 +10,8 @@ USE THIS FORM TO MAKE A CONFIGURATION SETTINGS GUI OPTION WHERE SAVING AND LOADI
 
 */
 
+using System.Xml;
+
 namespace HotkeysG {
     public partial class Form2 : Form {
         
@@ -40,6 +42,9 @@ namespace HotkeysG {
                     triggerKey = tempKey,
                 };
 
+            if (Path.GetFileName(path) == "git-bash.exe") {
+                kb.filMapp = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); //annars öppnar git-bash sig i sin egna folder, skönare att direkt börja från "Home"
+            }
             return kb;
         }
         private void taBortEnKeyBind() {
