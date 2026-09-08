@@ -19,10 +19,8 @@ namespace HotkeysG {
             IntPtr hWnd,
             int id
         );
-        //call ex: UnregisterHotKey(this.Handle, 1);
 
         public static void RegKeybinds(Form1 form1, List<KeyBindings> list) {
-            //foreach (KeyBindings bind in SettingsManager.loadedKB) {
             foreach (KeyBindings bind in list) {
                 RegisterHotKey(form1.Handle, bind.ID, bind.winSignal1 | bind.winSignal2, bind.triggerKey);
             }

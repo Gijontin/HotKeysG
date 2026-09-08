@@ -38,7 +38,7 @@ namespace HotkeysG {
                     filePath = path,
                     filMapp = Path.GetDirectoryName(path),
                     winSignal1 = 0x0001,
-                    winSignal2 = 0x0004,
+                    winSignal2 = 0x0004,    
                     triggerKey = tempKey,
                 };
 

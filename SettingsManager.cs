@@ -65,7 +65,11 @@ namespace HotkeysG {
                 new JsonSerializerOptions {WriteIndented = true}    //skumt json-feature skit
             );
 
-            File.WriteAllText("settings.json", json);
+        //så både test och release skriver (GARANTERAT) i sina respektiva folders
+            string mappnamn = AppDomain.CurrentDomain.BaseDirectory;
+            string filväg = Path.Combine(mappnamn, "settings.json");
+            File.WriteAllText(filväg, json);
+            //File.WriteAllText("settings.json", json);
         }
         public void reloadSetting() {
             sparaSettings();
