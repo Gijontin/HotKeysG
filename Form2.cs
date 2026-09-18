@@ -9,12 +9,10 @@ USE THIS FORM TO MAKE A CONFIGURATION SETTINGS GUI OPTION WHERE SAVING AND LOADI
     UNSURE IF HOTKEYS ARE CLICKED IN OR REGISTERED BY USER'S KEYBOARD INPUT (LATTER IS PREFERRED SO THEY ALSO GET A FEEL FOR IT IN THE PROCESS)
 
 */
-using Microsoft.VisualBasic;
-
 namespace HotkeysG {
     public partial class Form2 : Form {
         
-        //declare few variables for GUI
+    //(START) declare few variables for GUI --------------------------------
         private const int heightWnd = 360;
         private const int widthWnd = 640;
 
@@ -26,6 +24,9 @@ namespace HotkeysG {
         private Button removeKnapp;
         private Button stängKnapp;
         private ListView programLista;
+    //(END) declare few variables for GUI --------------------------------
+
+    //FUNKTIONER
         private KeyBindings? pathToObj(string path) { //kallas i VäljFiler()
             
             if (_settings.loadedKB == null) {return null;}
@@ -153,6 +154,7 @@ namespace HotkeysG {
             Application.Restart();
         }
         
+    //KONSTRUKTOR / RUNTAJM-PALOOZA
         public Form2(Form1 form1, SettingsManager settings) { //construct0r time baaaabeeeyyy
             
             _settings = settings;

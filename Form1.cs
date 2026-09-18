@@ -1,16 +1,16 @@
-using System.Linq.Expressions;
-
 namespace HotkeysG {
     public partial class Form1 : Form {
 
-        //hexadecimalkoderna för modifier-flags i Windows för respektive keyboard knapp, de är mer windows-specifika kodade signaler från knapparna och inte registrering av knapptrycken...
-        //har med hur windows läser bits istället för uint fsModifiers parametern i RegisterHotKey
+    //hexadecimalkoderna för modifier-flags i Windows för respektive keyboard knapp, de är mer windows-specifika kodade signaler från knapparna och inte registrering av knapptrycken...
+    //har med hur windows läser bits istället för uint fsModifiers parametern i RegisterHotKey
         private const uint MOD_ALT = 0x0001; //NOT the same as: Keys.Alt
         private const uint MOD_SHIFT = 0x0004; //NOT the same as: Keys.Shift
         private const uint WM_HOTKEY = 0x0312; //typ signalen ditt program/fönster får när en valid key-kombo har tryckts (WndProc som fångar upp den)
         
         private NotifyIcon trayIcon;
         private SettingsManager settings;
+
+    //KONSTRUKTOR
         public Form1(){ //constructor (gör en osynlig winform app för att lätt komma åt hotkey funktionalitet i windows)
         //start form(app)
             InitializeComponent();
@@ -43,7 +43,10 @@ namespace HotkeysG {
             this.WindowState = FormWindowState.Minimized;
             this.Visible = false;
         }
-    //WindowProcedure funktionen som lyssnar efter WM_HOTKEY som då är en return som signalerar att wParam har skickats ut, dvs en bekräftelse på att ett ID från RegisterHotKeys har tryckts ned och vilken
+    
+    
+    //MODDADE WINFORM FUNKTIONER (importerat user32.dll så dessa funktioner kan lyssna efter meddelanden därifrån)
+    //...lyssnar efter WM_HOTKEY som då är en return som signalerar att wParam har skickats ut, dvs en bekräftelse på att ett ID från RegisterHotKeys har tryckts ned och vilken
         protected override void WndProc(ref Message m) {
             /*
             det här är winform feature som då lyssnar på vad som händer, mus-movement, keybord tryck, window refresh etc

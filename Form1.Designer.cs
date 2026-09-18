@@ -1,5 +1,8 @@
 ﻿namespace HotkeysG;
 
+/*
+    PREMADE DOTNET WINFORM TEMPLATE, UNECESSARY BUT I WAS CURIOUS WHAT IT WOULD PRODUCE
+*/
 partial class Form1
 {
     /// <summary>
@@ -31,7 +34,7 @@ partial class Form1
         components = new System.ComponentModel.Container();
         FormBorderStyle = FormBorderStyle.FixedToolWindow;
         AutoScaleMode = AutoScaleMode.Font;
-        ClientSize = new Size(800, 450);
+        ClientSize = new Size(100, 100);
         Opacity = 0;
         Text = "HotkeysG";
     }

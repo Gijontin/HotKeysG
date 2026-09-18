@@ -3,7 +3,10 @@ using System.Text.Json;
 namespace HotkeysG {
     public class SettingsManager {
 
+    //CACHED MEMORY (laddar in en settings.json fil för keybind data)
         public List<KeyBindings>? loadedKB;
+    
+    //FUNKTIONER
         private string HämtaFilväg() {
             return Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.json");
         }
