@@ -1,3 +1,5 @@
+using System.Linq.Expressions;
+
 namespace HotkeysG {
     public partial class Form1 : Form {
 
@@ -16,7 +18,9 @@ namespace HotkeysG {
 
             //Import the ID for configured hotkeys så att man kan skriva en kod som fattar upp ID:na i WndProc
             //HandleCreated blir som en aktiv lyssnare efter ändringar och uppdaterar då "spontant" Form1 med RegKeybinds
-            this.HandleCreated += (s, e) => HotKeyManager.ReloadRegKeybinds(this, settings.loadedKB); //bara WinForm32 quirk som kräver denna reloadgrejen här...
+            if (settings.loadedKB != null) {
+                this.HandleCreated += (s, e) => HotKeyManager.ReloadRegKeybinds(this, settings.loadedKB); //bara WinForm32 quirk som kräver denna reloadgrejen här...
+            }
 
         //TrayIcon
             trayIcon = new NotifyIcon();
@@ -51,13 +55,16 @@ namespace HotkeysG {
             */
             if (m.Msg == WM_HOTKEY){
                 int id = m.WParam.ToInt32();
-                foreach (KeyBindings bind in settings.loadedKB){
-                    if (bind.ID == id){
-                        HotKeyManager.LaunchProgram(id, settings.loadedKB);
-                        //LaunchProgram(id);
-                        break;
+                if (settings.loadedKB != null) {
+                    foreach (KeyBindings bind in settings.loadedKB){
+                        if (bind.ID == id){
+                            HotKeyManager.LaunchProgram(id, settings.loadedKB);
+                            //LaunchProgram(id);
+                            break;
+                        }
                     }
                 }
+
             }
 
             //använder detta call:et för att låta WndProcs normala checks/funktioner hanteras ändå, if är bara ett filter för all the "noise"
@@ -65,9 +72,12 @@ namespace HotkeysG {
         }
 
         protected override void OnFormClosing(FormClosingEventArgs e){
+            
             //moddar denna biten så att Windows inte tror att programmet fortfarande "äger" keybind:en efter programmet stängs ned
-            HotKeyManager.UnregKeybinds(this, settings.loadedKB);
-
+            if (settings.loadedKB != null) {
+                HotKeyManager.UnregKeybinds(this, settings.loadedKB);
+            }
+            
             //removes potential "ghost icon" remaining after closing software
             trayIcon.Visible = false;
             trayIcon.Dispose();

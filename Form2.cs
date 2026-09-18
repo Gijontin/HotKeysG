@@ -9,8 +9,7 @@ USE THIS FORM TO MAKE A CONFIGURATION SETTINGS GUI OPTION WHERE SAVING AND LOADI
     UNSURE IF HOTKEYS ARE CLICKED IN OR REGISTERED BY USER'S KEYBOARD INPUT (LATTER IS PREFERRED SO THEY ALSO GET A FEEL FOR IT IN THE PROCESS)
 
 */
-
-using System.Xml;
+using Microsoft.VisualBasic;
 
 namespace HotkeysG {
     public partial class Form2 : Form {
@@ -21,41 +20,61 @@ namespace HotkeysG {
 
         //private Form1 huvudForm; //dålig idé, kommer nog ej använda...
         private SettingsManager _settings;
+        private Form1 _form1;
         private readonly int buttonHeight; //init in the constructor in a DPI friendly way, "readonly" closest I can get to declaring this variable a 'const'
         private Button addKnapp;
         private Button removeKnapp;
         private Button stängKnapp;
         private ListView programLista;
-        private KeyBindings pathToObj(string path) {
+        private KeyBindings? pathToObj(string path) { //kallas i VäljFiler()
+            
+            if (_settings.loadedKB == null) {return null;}
             
             //skapa en liten prompt ruta som försvinner man angivet en Keys
             Keys tempKey = SettingsManager.CaptureKey(); //GLÖM EJ ATT DENNA SKAPAR EN LITEN MINI-FORM DEN MED
             
+                if (tempKey == Keys.None) {return null;}
+
+            //Kolla om ctrl eller alt ska sättas till winSignal1...
+            var modifiersFilter = tempKey & Keys.Modifiers; //exkluderar Keys.KeyCode
+            uint whichModKey = modifiersFilter.HasFlag(Keys.Control) ? (uint)0x0002 : (uint)0x0001;
+
             //om user trycker 'Esc' så ska hela sparningsprocessen avbrytas
                 KeyBindings kb = new KeyBindings {
                     ID = _settings.loadedKB.Count,
                     namn = Path.GetFileName(path),
                     filePath = path,
                     filMapp = Path.GetDirectoryName(path),
-                    winSignal1 = 0x0001,
-                    winSignal2 = 0x0004,    
-                    triggerKey = tempKey,
+                    winSignal1 = whichModKey, //ctrl eller alt
+                    winSignal2 = 0x0004,      //shift
+                    triggerKey = tempKey & Keys.KeyCode, //(VIKTIGT)filtrerar bort Keys.Modifiers
                 };
 
             if (Path.GetFileName(path) == "git-bash.exe") {
-                kb.filMapp = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); //annars öppnar git-bash sig i sin egna folder, skönare att direkt börja från "Home"
+                kb.filMapp = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile); //annars öppnar git-bash sig i sin egna folder, skönare att direkt börja från "Home" (trust me, bruv)
             }
             return kb;
         }
         private void taBortEnKeyBind() {
             try {
-                var select = programLista.SelectedItems[0];
-                var kb = (KeyBindings)select.Tag;
+                if (_settings.loadedKB == null) {return;}
 
-                _settings.loadedKB.Remove(kb);
-                programLista.Items.Remove(select);
-                _settings.reloadSetting();
-                uppdateraProgramListan();
+                var select = programLista.SelectedItems[0];
+
+                KeyBindings? kb = (KeyBindings?)select.Tag;
+
+                if (kb != null) { //bör endast hända om kb faktiskt inte var null såatteh...
+                    HotKeyManager.UnregKeybinds(_form1, _settings.loadedKB);
+
+                    _settings.loadedKB.Remove(kb);
+                    programLista.Items.Remove(select);
+
+                    _settings.sparaSettings();
+
+                    HotKeyManager.RegKeybinds(_form1, _settings.loadedKB);
+                    //_settings.reloadSetting();
+                    uppdateraProgramListan();
+                }
             } catch {
                 
             }
@@ -64,13 +83,16 @@ namespace HotkeysG {
         
         //rensa FÖRST
             programLista.Items.Clear();
-        
+
+        //spärr
+            if (_settings.loadedKB == null) {return;}
+
         //importera KeyBindings
             foreach (var prgm in _settings.loadedKB) {
 
-                string modkeys = "Alt ";
-                    if (prgm.winSignal2 == 0x0004) {
-                        modkeys += "+ Shift";
+                string modkeys = "Shift ";
+                    if (prgm.winSignal1 == 0x0001) {
+                        modkeys += "+ Alt";
                     } else {
                         modkeys += "+ Ctrl";
                     }
@@ -79,8 +101,9 @@ namespace HotkeysG {
                     item.SubItems.Add($"{prgm.ID}");               //ID
                     item.SubItems.Add(prgm.filePath);              //Filväg
                     item.SubItems.Add(modkeys);                    //Modifier Keys
-                    item.SubItems.Add(prgm.triggerKey.ToString()); //Key
-                    item.Tag = prgm;
+                    item.SubItems.Add((prgm.triggerKey &           //(VIKTIGT)filtrerar bort Keys.Modifiers ...igen
+                    Keys.KeyCode).ToString()); 
+                    item.Tag = prgm;                               //select-enabling tag för add/remove options
                     programLista.Items.Add(item);
             }
         }
@@ -97,29 +120,28 @@ namespace HotkeysG {
                 }
 
             //försök fylla i kb (program och dess hotkeys)
-                KeyBindings kb;
-                try {
-                    kb = pathToObj(dlg.FileName);
-                } 
-                catch {
-                    return; //tror inget felmeddelande behövs här
-                }
+                KeyBindings? kb = pathToObj(dlg.FileName);
+                if (kb == null) return;
+
 
             //Om användaren tryckt escape så avbryter vi sparandet och återgår till Settings rutan där 
             // man kan trycka 'Add' igen för ett nytt försök
-                if (kb.triggerKey == Keys.Escape) {
+                if (kb.triggerKey == Keys.Escape) { //överflödig due to refactor men bör kunna sitta kvar...
                         return;
                 }
 
             //Vid succee, spara allting och uppdatera/ladda om list(-or)
-                _settings.loadedKB.Add(kb);
-                _settings.sparaSettings();
+                if (_settings.loadedKB != null) { //listan kan vara tom men måste åtminstone existera... :P
+                    _settings.loadedKB.Add(kb);
+                    _settings.sparaSettings();
+
+                    HotKeyManager.ReloadRegKeybinds(_form1, _settings.loadedKB);
+                }
+
                 uppdateraProgramListan();
-                //fungerar ej utan omstart vilket betyder meningslös placering av call:et
-                //HotKeyManager.RegKeybinds(huvudForm, _settings.loadedKB);
             }
         }
-        private void startaOmAppenEfterSettings(object s, FormClosedEventArgs e) {
+        private void startaOmAppenEfterSettings(object? s, FormClosedEventArgs e) {
             /*
                 Hacky lösning för att få nya tillagda hotkeys att registrera utan att
                 manuellt starta om programmet.
@@ -131,9 +153,10 @@ namespace HotkeysG {
             Application.Restart();
         }
         
-        public Form2(Form form1, SettingsManager settings) { //construct0r time baaaabeeeyyy
+        public Form2(Form1 form1, SettingsManager settings) { //construct0r time baaaabeeeyyy
             
             _settings = settings;
+            _form1 = form1;
 
             this.FormClosed += startaOmAppenEfterSettings; //hacky lösning för att registrera nya konfigurerade hotkeys
 

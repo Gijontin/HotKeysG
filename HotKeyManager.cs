@@ -22,7 +22,7 @@ namespace HotkeysG {
 
         public static void RegKeybinds(Form1 form1, List<KeyBindings> list) {
             foreach (KeyBindings bind in list) {
-                RegisterHotKey(form1.Handle, bind.ID, bind.winSignal1 | bind.winSignal2, bind.triggerKey);
+                RegisterHotKey(form1.Handle, bind.ID, bind.winSignal1 | bind.winSignal2, bind.triggerKey & Keys.KeyCode); //viktigt att filtrera ut KeyCode här (också)
             }
         }
         public static void UnregKeybinds(Form1 form1, List<KeyBindings> list) {
@@ -37,10 +37,13 @@ namespace HotkeysG {
         public static void LaunchProgram(int id, List<KeyBindings> list) {
             try {
                 ProcessStartInfo program = new ProcessStartInfo();
-                program.FileName = list[id].filePath;
+                    program.FileName = list[id].filePath;
+                    program.UseShellExecute = true;         //den här bool:en behöver aktiveras(set to true) för att launch:a filformat som inte är .exe
+                
                 if (!string.IsNullOrEmpty(list[id].filMapp)) {
                     program.WorkingDirectory = list[id].filMapp;
                 }
+                
                 Process.Start(program);
             } 
             catch {
