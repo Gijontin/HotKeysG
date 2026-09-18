@@ -4,12 +4,28 @@
 
 TL;DR
 
-- Just a barebones program for Windows >ONLY< that allows for custom keybinds to launch/open any files your PC can read.
+- Windows ONLY
+  allows for custom keybinds to launch/open any files your PC is capable of launch/open.
 
-You'll only find the program accessible through the TrayIcon menu (the little tab with programs usually next to the time/date
-display on the taskbar), which, by right-clicking and then selecting the "Configure Settings" option, will take you to the
-hotkey binding menu.
 
+- The only working keybinding combos are:
+
+  Shift + ALT + Key( only letters A to Ö OR numbers 0 to 9 will work)
+  Shift + CTRL + Key( only letters A to Ö OR numbers 0 to 9 will work)
+
+  (the keybind limitation is for the purpose of having less conflicts with other programs and what not...)
+
+
+- You'll only find the program accessible through the TrayIcon menu (the little tab with programs usually next to the 
+  time/date display on the taskbar), which, by right-clicking and then selecting the "Configure Settings" option, will
+  take you to the hotkey binding menu.
+
+- NOTE: There are two things that really make this program shine:
+        1. The launch on startup implementation
+        2. The fact that you (should be able to) keybind anything
+           - not only launch software but quickly access commonly used text files, images etc 
+           - OR even make your own .bat script files and easily keybind them for more elaborate tasks
+           
 ------------------------------------------------------------------------------------------------------------------------------
 
 DESIGN PHILOSOPHY (?)
